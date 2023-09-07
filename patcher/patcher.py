@@ -225,6 +225,8 @@ def parse_other(metadata, other, should_replace=_should_replace):
                     continue
             elif not should_replace(file, m, o, extra):
                 continue
+        elif file in metadata["deleted"]:
+            continue
 
         info = {}
         info.update(o)
@@ -807,7 +809,7 @@ class Patcher:
             md5 = hash_file(path, progress=self._progress)
         except FileNotFoundError:
             raise PatcherError(
-                'Can\'t hash "{path}" because it doesn\'t exist'
+                f'Can\'t hash "{path}" because it doesn\'t exist'
                 "I don't know if you deleted it yourself or if your "
                 "anti-virus did it..."
             )
@@ -815,6 +817,11 @@ class Patcher:
             raise AVButtinInError(
                 f'Can\'t hash "{path}" file. Make sure your anti-virus'
                 " doesn't block this program."
+                "\nIf that doesn't help reboot your PC and try copying "
+                "that file somewhere else (doesn't matter where). If you "
+                "can copy the file - reset file permissions (see the readme"
+                " file). If you can't copy the file - delete it, since it's"
+                " corrupted anyway."
             )
 
         self._hashes[path_str] = [md5, info["size"], info["mtime"]]
@@ -1104,7 +1111,14 @@ class Patcher:
         try:
             if shutil.disk_usage(path).free < required:
                 raise NotEnoughSpaceError(
-                    f"You don't have enough space on {path.anchor} drive!"
+                    f"You don't have enough space on your {path.anchor} drive!\n\n"
+                    f'{self.NAME} stores temporary files in "{self._temp_dir}". '
+                    f"This folder is located in the same place as the {self.NAME}, "
+                    f'in "{os.getcwd()}". Make some space or move all {self.NAME} '
+                    "files somewhere else.\n\nIf you can't make more space check if "
+                    f'there are any files in "{self._final_dir}". These are updated '
+                    "game files and you can move them to your game folder - that "
+                    "should free up some space."
                 )
         except FileNotFoundError:
             raise PatcherError(

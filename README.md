@@ -25,9 +25,9 @@ I consider it good enough, I don't plan to make any changes. I know it's inconsi
     A: First culprit is your anti-virus. Disable it.
        If that doesn't help reset file permissions (see question below).
        If that doesn't help copy the Patcher and patch files somewhere else.
-           That's important: COPY, not move.
-       If that doesn't help copy your game somewhere else.
-           Again: COPY, not move.
+           That's important: COPY, not move. And then run the copied Patcher.
+       If that doesn't help copy your game somewhere else and skip corrupted files.
+           Again: COPY, not move. And then run the Patcher on the copied game.
 
     Q: Error message tells me to reset file permissions, how do I do it?
     A: Download this file
