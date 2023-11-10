@@ -1,3 +1,4 @@
+import os
 import errno
 import json
 
@@ -31,9 +32,12 @@ def save(path, obj):
     except TypeError:
         return
 
+    path = str(path)
+    path_tmp = f"{path}_tmp"
     try:
-        with open(path, "w") as f:
+        with open(path_tmp, "w") as f:
             f.write(serialized)
+        os.replace(path_tmp, path)
     except (OSError, PermissionError) as e:
         if e.errno == errno.ENOSPC:
             raise NotEnoughSpaceError(
@@ -41,5 +45,8 @@ def save(path, obj):
             )
         raise PatcherError(
             f'Can\'t save "{path}". Make sure your '
-            "anti-virus doesn't block this program."
+            "anti-virus doesn't block this program. "
+            "If this file exists - move it somewhere else and then copy "
+            "it back. If it doesn't exist - do the same with the folder "
+            "this file was supposed to be in."
         )
