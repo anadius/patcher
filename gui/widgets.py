@@ -98,8 +98,8 @@ class Dialog(tk.simpledialog.Dialog):
 
 
 class Link(tk.Label):
-    def __init__(self, parent, text, action):
-        super().__init__(parent, text=text, fg="blue", cursor="hand2")
+    def __init__(self, parent, text, action, **kwargs):
+        super().__init__(parent, text=text, fg="blue", cursor="hand2", **kwargs)
         if isinstance(action, str):
             url = action
             action = lambda e: open_url(url)
@@ -147,6 +147,14 @@ class CheckDialog(Dialog):
 
         super().__init__(parent, **kwargs)
 
+    def check_all(self):
+        if self.check_all_value.get() == 1:
+            for i, checkbox_val in enumerate(self._checkbox_values):
+                checkbox_val.set(i)
+        else:
+            for checkbox_val in self._checkbox_values:
+                checkbox_val.set(-1)
+
     def content(self, parent):
         parent.grid_columnconfigure(0, weight=1)
 
@@ -162,6 +170,16 @@ class CheckDialog(Dialog):
         while count / in_one_column > 4:
             in_one_column += 1
 
+        self.check_all_value = tk.IntVar(value=0)
+        checkbox = tk.ttk.Checkbutton(
+            parent,
+            text="(un)check all",
+            variable=self.check_all_value,
+            style="PatcherDialog.TCheckbutton",
+            command=self.check_all,
+        )
+        checkbox.grid(row=1, column=0, sticky="w")
+
         for i, name in enumerate(self.values):
             checkbox_val = tk.IntVar(value=i if name in self.checked else -1)
             self._checkbox_values.append(checkbox_val)
@@ -174,7 +192,7 @@ class CheckDialog(Dialog):
                 offvalue=-1,
                 style="PatcherDialog.TCheckbutton",
             )
-            checkbox.grid(row=1+i%in_one_column, column=i//in_one_column, sticky="w")
+            checkbox.grid(row=2+i%in_one_column, column=i//in_one_column, sticky="w")
 
     def apply(self):
         result = []
