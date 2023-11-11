@@ -684,11 +684,12 @@ class Patcher:
         ):
             pass
         else:
-            write_check(self._game_dir)
-
             self.extract_crack(crack, updated)
 
-            self.move_updated_files(updated)
+            if len(updated) > 0:
+                write_check(self._game_dir)
+
+                self.move_updated_files(updated)
 
         self._delete_files(
             map(lambda x: self._game_dir / x, metadata["deleted"]), report=True
