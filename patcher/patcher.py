@@ -1141,6 +1141,12 @@ class Patcher:
         self.callback(CallbackType.HEADER, "Extracting files")
 
         for archive, files in to_extract.items():
+            all_extra = True
+            for _, info in files:
+                if info.get("type") != "extra":
+                    all_extra = False
+                    break
+
             required = sum(map(lambda x: x[1]["size"], files))
             self._check_space(required)
 
@@ -1149,6 +1155,7 @@ class Patcher:
             try:
                 with myzipfile.ZipFile(archive) as zf:
                     for file, info in files:
+                        is_extra = info.get("type") == "extra"
                         self.callback(CallbackType.INFO, f"extracting {file}")
 
                         self._create_folder(info["path"].parent)
@@ -1159,7 +1166,8 @@ class Patcher:
                             ) as fdst:
                                 copyfileobj(fsrc, fdst, self._progress)
                         except (myzipfile.BadZipFile, zlib.error, EOFError):
-                            error_occured = True
+                            if not is_extra:
+                                error_occured = True
                             self.callback(CallbackType.FAILURE, "FAILED")
                         except OSError as e:
                             if e.errno == errno.ENOSPC:
@@ -1167,18 +1175,28 @@ class Patcher:
                                     "You don't have enough space on "
                                     f"{Path(file).anchor} drive!"
                                 )
-                            raise PatcherError(
-                                f"Extraction failed. Make sure your "
-                                "anti-virus doesn't block this program."
-                            )
+                            if is_extra:
+                                self.callback(CallbackType.FAILURE, "FAILED")
+                            else:
+                                raise PatcherError(
+                                    f"Extraction failed. Make sure your "
+                                    "anti-virus doesn't block this program."
+                                )
+                        else:
+                            info["extracted"] = True
 
-                        info["extracted"] = True
                         self._progress_current += info["size"]
             except FileNotFoundError as e:
-                raise PatcherError(
-                    f'"{e.filename}" not found. Run this program again and'
-                    " don't delete any files while it's running."
-                )
+                if all_extra:
+                    self.callback(
+                        CallbackType.INFO,
+                        f"\nArchive {archive} missing but it's optional.\n",
+                    )
+                else:
+                    raise PatcherError(
+                        f'"{e.filename}" not found. Run this program again and'
+                        " don't delete any files while it's running."
+                    )
 
             self.do_after_extraction(archive, error_occured)
 
@@ -1390,8 +1408,11 @@ class Patcher:
             tmp = None
 
             if len(updates) == 1:
+                info = updates[0]
+                if info.get("type") == "extra" and not info.get("extracted", False):
+                    continue
                 updated_file = src
-                expected_size = updates[-1]["size"]
+                expected_size = info["size"]
             else:
                 self.callback(CallbackType.INFO, f"updating {file}")
 
