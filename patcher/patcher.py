@@ -670,7 +670,7 @@ class Patcher:
 
         self.extract_files(to_extract)
 
-        updated = self.apply_patches(best)
+        updated, extra_files = self.apply_patches(best)
 
         self.callback(CallbackType.PROGRESS, 100, 100)
 
@@ -689,7 +689,7 @@ class Patcher:
             if len(updated) > 0:
                 write_check(self._game_dir)
 
-                self.move_updated_files(updated)
+                self.move_updated_files(updated, extra_files)
 
         self._delete_files(
             map(lambda x: self._game_dir / x, metadata["deleted"]), report=True
@@ -1395,9 +1395,10 @@ class Patcher:
 
     def apply_patches(self, best):
         updated = {}
+        extra_files = set()
 
         if len(best) == 0:
-            return updated
+            return updated, extra_files
 
         self.callback(CallbackType.HEADER, "Updating files")
 
@@ -1409,8 +1410,11 @@ class Patcher:
 
             if len(updates) == 1:
                 info = updates[0]
-                if info.get("type") == "extra" and not info.get("extracted", False):
-                    continue
+                if info.get("type") == "extra":
+                    if not info.get("extracted", False):
+                        continue
+                    else:
+                        extra_files.add(file)
                 updated_file = src
                 expected_size = info["size"]
             else:
@@ -1466,7 +1470,7 @@ class Patcher:
             ]
             self._delete_files(to_delete, report=False)
 
-        return updated
+        return updated, extra_files
 
     def _get_crack_path(self, crack):
         """
@@ -1584,7 +1588,7 @@ class Patcher:
             "make sure your anti-virus doesn't block this program."
         )
 
-    def move_updated_files(self, updated):
+    def move_updated_files(self, updated, extra_files):
         self.callback(CallbackType.HEADER, "Moving files")
 
         self._progress_total = sum(map(lambda x: x[2], updated.values()))
@@ -1613,8 +1617,12 @@ class Patcher:
                 if dst.exists():
                     dst.unlink()
             except PermissionError:
+                if file in extra_files:
+                    continue
                 raise WritePermissionError(delete_error_message)
             except OSError as e:
+                if file in extra_files:
+                    continue
                 raise PatcherError(delete_error_message)
 
             move_error_message = LAST_STEP_ERROR.format(
@@ -1627,14 +1635,20 @@ class Patcher:
             try:
                 src.replace(dst)
             except PermissionError:
+                if file in extra_files:
+                    continue
                 raise WritePermissionError(move_error_message)
             except FileNotFoundError:
+                if file in extra_files:
+                    continue
                 raise PatcherError(
                     f'Can\'t move {file}, because it doesn\'t exist. Make sure'
                     " your anti-virus doesn't delete any files."
                 )
             except OSError as e:
                 if e.errno != errno.EXDEV:
+                    if file in extra_files:
+                        continue
                     raise PatcherError(move_error_message)
 
                 copy_error_message = LAST_STEP_ERROR.format(
@@ -1648,6 +1662,8 @@ class Patcher:
                     with open(src, "rb") as fsrc, open(dst, "wb") as fdst:
                         copyfileobj(fsrc, fdst, self._progress)
                 except PermissionError:
+                    if file in extra_files:
+                        continue
                     raise WritePermissionError(copy_error_message)
                 except OSError as e:
                     if e.errno == errno.ENOSPC:
@@ -1656,6 +1672,8 @@ class Patcher:
                             f"{Path(dst).anchor} drive!"
                         )
                     else:
+                        if file in extra_files:
+                            continue
                         raise PatcherError(copy_error_message)
 
                 files_to_delete.append(src)
