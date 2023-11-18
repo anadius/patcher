@@ -8,6 +8,20 @@ import time
 __all__ = ["Popen2"]
 
 
+if os.name == "nt":
+    import ctypes
+    from multiprocessing import Process
+
+
+    def ctrlc(pid):
+        kernel = ctypes.windll.kernel32
+        kernel.FreeConsole()
+        kernel.AttachConsole(pid)
+        kernel.SetConsoleCtrlHandler(None, 1)
+        kernel.GenerateConsoleCtrlEvent(0, 0)
+        sys.exit(0)
+
+
 def _process_buffer(buf):
     lines = buf.replace(b"\r\n", b"\n").split(b"\n")
     buf = lines.pop()
@@ -36,25 +50,9 @@ class Popen2(subprocess.Popen):
 
     def interrupt(self):
         if os.name == "nt":  # Windows
-            if getattr(sys, "frozen", False):  # when using PyInstaller
-                command = ["ctrlc"]
-            else:
-                command = [
-                    sys.executable,
-                    "-c",
-                    "import ctypes, sys;"
-                    "kernel = ctypes.windll.kernel32;"
-                    "pid = int(sys.argv[1]);"
-                    "kernel.FreeConsole();"
-                    "kernel.AttachConsole(pid);"
-                    "kernel.SetConsoleCtrlHandler(None, 1);"
-                    "kernel.GenerateConsoleCtrlEvent(0, 0);"
-                    "sys.exit(0)",
-                ]
-            command.append(str(self.pid))
-
             try:
-                p = Popen2(command)
+                p = Process(target=ctrlc, args=(self.pid, ))
+                p.start()
             except Exception as e:
                 self.terminate()
                 self.wait()
@@ -66,7 +64,7 @@ class Popen2(subprocess.Popen):
 
             watchdog = threading.Timer(10, p.terminate)
             watchdog.start()
-            p.wait()
+            p.join()
             watchdog.cancel()
 
         else:  # Linux or Mac

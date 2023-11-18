@@ -11,6 +11,7 @@ import tkinter.filedialog
 import tkinter.ttk
 import tkinter.font
 
+from multiprocessing import freeze_support
 from threading import Lock
 from pathlib import Path
 from webbrowser import open as open_page
@@ -582,4 +583,5 @@ def main():
 
 
 if __name__ == "__main__":
+    freeze_support()
     main()
