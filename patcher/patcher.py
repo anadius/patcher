@@ -687,8 +687,6 @@ class Patcher:
             self.extract_crack(crack, updated)
 
             if len(updated) > 0:
-                write_check(self._game_dir)
-
                 self.move_updated_files(updated, extra_files)
 
         self._delete_files(
@@ -1590,6 +1588,8 @@ class Patcher:
 
     def move_updated_files(self, updated, extra_files):
         self.callback(CallbackType.HEADER, "Moving files")
+
+        write_check(self._game_dir)
 
         self._progress_total = sum(map(lambda x: x[2], updated.values()))
         self._progress_current = 0
