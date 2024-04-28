@@ -55,6 +55,13 @@ else:
 
 
 def write_check(path="."):
+    if path == ".":
+        text = (
+            "this folder.\nDo NOT put this program directly on your "
+            "system drive (C:) nor in Program Files!"
+        )
+    else:
+        text = f'"{path}". Try copying your game somewhere else.'
     path = Path(path)
 
     i = 0
@@ -70,9 +77,7 @@ def write_check(path="."):
             continue
         except (PermissionError, FileNotFoundError, OSError):
             raise WritePermissionError(
-                "Can't create or delete files in this folder, move "
-                "the program somewhere else.\nDo NOT put it directly"
-                " on your system drive (C:) nor in Program Files!"
+                f"Write test failed. Cannot create files in {text}"
             )
         else:
             break
