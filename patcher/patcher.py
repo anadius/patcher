@@ -1221,7 +1221,7 @@ class Patcher:
                 "Make sure your anti-virus doesn't block this program."
             )
 
-    def _xdelta(self, args, expected_size, tmp):
+    def _xdelta(self, args, expected_size, tmp, increase_progress=True):
         if os.name == "nt":
             for i, arg in enumerate(args):
                 try:
@@ -1375,7 +1375,8 @@ class Patcher:
             )
             # raise XdeltaError(f"Failed to apply the patch:\n{lines_str}")
 
-        self._progress_current += expected_size
+        if increase_progress:
+            self._progress_current += expected_size
 
         return dst
 
@@ -1436,7 +1437,35 @@ class Patcher:
                     update = updates[1]["path"]
                 else:
                     combined_size = sum(map(lambda x: x["size"], updates[1:]))
-                    update = self._combine_updates(updates, combined_size, tmp)
+                    try:
+                        update = self._combine_updates(updates, combined_size, tmp)
+                    except XdeltaError:
+                        self.callback(
+                            CallbackType.INFO,
+                            (
+                                "Failed to merge the updates. "
+                                "Trying to apply them one by one."
+                            ),
+                        )
+                        temp_files = []
+                        # Skip the first entry (full file) and the last one (last patch)
+                        for i, update_info in enumerate(updates[1: -1], 1):
+                            self.callback(CallbackType.INFO, f"Applying patch {i}")
+                            temp_files.append(
+                                self._apply_update(
+                                    src,
+                                    update_info["path"],
+                                    update_info["size_to"],
+                                    tmp,
+                                    False,
+                                )
+                            )
+                            src = temp_files[-1]
+                            # Delete unnecessary files
+                            while len(temp_files) > 1:
+                                self._delete_file(temp_files.pop(0))
+                        # Apply the last patch normally
+                        update = updates[-1]["path"]
 
                 expected_size = updates[-1]["size_to"]
                 updated_file = self._apply_update(src, update, expected_size, tmp)
