@@ -1,2 +1,2 @@
 -r requirements.txt
-PyInstaller
+pyinstaller==5.3
