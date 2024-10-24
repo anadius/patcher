@@ -8,7 +8,7 @@ python -m PyInstaller ^
     --clean ^
     --name patcher ^
     --icon icon.ico ^
-    --add-binary tools\*;tools ^
+    --add-binary tools\*.exe;tools ^
     --add-data tools\*.txt;tools ^
     patcher_gui.py
 
